@@ -1,5 +1,7 @@
+.dockerignore
 .idea
 *.log
 config/settings.json
+dockerfile
 node_modules/
 yarn.lock
