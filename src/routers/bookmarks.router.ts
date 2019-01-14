@@ -1,7 +1,7 @@
 import { autobind } from 'core-decorators';
 import { NextFunction, Request, Response } from 'express';
+import { Bookmarks } from "../core/dbentities";
 
-import DB from '../core/db';
 import { RequiredDataNotFoundException } from '../core/exception';
 import { ApiVerb } from '../core/server';
 import BaseRouter, { IApiRouter } from '../routers/base.router';
@@ -70,7 +70,7 @@ export default class BookmarksRouter extends BaseRouter<BookmarksService> implem
   private async getBookmarks(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // Check sync id has been provided
-      const id = this.getSyncId(req);
+      const id = await this.getSyncId(req);
 
       // Call service method to retrieve bookmarks data and return response as json
       const bookmarks = await this.service.getBookmarks(id, req);
@@ -91,7 +91,7 @@ export default class BookmarksRouter extends BaseRouter<BookmarksService> implem
   private async getLastUpdated(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // Check sync id has been provided
-      const id = this.getSyncId(req);
+      const id = await this.getSyncId(req);
 
       // Call service method to get bookmarks last updated date and return response as json
       const lastUpdated = await this.service.getLastUpdated(id, req);
@@ -103,11 +103,13 @@ export default class BookmarksRouter extends BaseRouter<BookmarksService> implem
   }
 
   // Retrieves the sync ID from the request query string parameters
-  private getSyncId(req: Request): string {
+  private async getSyncId(req: Request): Promise<string> {
     const id = req.params.id;
 
     // Check id is valid
-    DB.idIsValid(id);
+    if (!await Bookmarks.idIsValid(id)) {
+      throw new Error("id not found");
+    }
 
     return id;
   }
@@ -117,7 +119,7 @@ export default class BookmarksRouter extends BaseRouter<BookmarksService> implem
   private async getVersion(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // Check sync id has been provided
-      const id = this.getSyncId(req);
+      const id = await this.getSyncId(req);
 
       // Call service method to get sync version and return response as json
       const syncVersion = await this.service.getVersion(id, req);
@@ -133,7 +135,7 @@ export default class BookmarksRouter extends BaseRouter<BookmarksService> implem
   private async updateBookmarks_v1(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // Check sync id has been provided
-      const id = this.getSyncId(req);
+      const id = await this.getSyncId(req);
 
       // Get posted bookmarks data
       const bookmarksData = this.getBookmarksData(req);
@@ -155,7 +157,7 @@ export default class BookmarksRouter extends BaseRouter<BookmarksService> implem
   private async updateBookmarks_v2(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // Check sync id has been provided
-      const id = this.getSyncId(req);
+      const id = await this.getSyncId(req);
 
       // Get posted bookmarks data
       const bookmarksData = this.getBookmarksData(req);

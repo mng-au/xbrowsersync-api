@@ -10,7 +10,6 @@ import * as mkdirp from 'mkdirp';
 import * as path from 'path';
 
 import Config from '../core/config';
-import DB from '../core/db';
 import {
   ExceptionBase,
   NotImplementedException,
@@ -58,7 +57,6 @@ export default class Server {
 
   private app: express.Application;
   private bookmarksService: BookmarksService;
-  private db: DB;
   private infoService: InfoService;
   private logger: bunyan;
   private newSyncLogsService: NewSyncLogsService;
@@ -76,9 +74,6 @@ export default class Server {
       this.prepareDataServices();
       this.prepareRoutes();
       this.app.use(this.handleErrors);
-
-      // Establish database connection
-      await this.connectToDb();
     }
     catch (err) {
       this.log(LogLevel.Error, `Service failed to start`, null, err);
@@ -176,7 +171,6 @@ export default class Server {
   // Cleans up server connections when stopping the service
   private async cleanupServer(): Promise<void> {
     this.log(LogLevel.Info, `Service shutting down`);
-    await this.db.closeConnection();
     this.server.removeAllListeners();
     process.removeAllListeners();
   }
@@ -283,12 +277,6 @@ export default class Server {
         windowMs: Config.get().throttle.timeWindow
       }));
     }
-  }
-
-  // Initialises and connects to mongodb
-  private async connectToDb(): Promise<void> {
-    this.db = new DB(this.log);
-    await this.db.openConnection();
   }
 
   // Handles and logs api errors

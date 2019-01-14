@@ -1,3 +1,6 @@
+.idea
+dist
 *.log
 config/settings.json
 node_modules/
+yarn.log

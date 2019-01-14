@@ -4,12 +4,14 @@
     "module": "commonjs",
     "forceConsistentCasingInFileNames": true,
     "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "skipLibCheck": true,
     "typeRoots": [
       "./node_modules/@types"
     ],
     "lib": [
       "dom",
+      "es6",
       "es2017",
       "scripthost"
     ],

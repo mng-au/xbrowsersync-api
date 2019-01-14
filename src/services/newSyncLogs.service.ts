@@ -1,35 +1,38 @@
-import { Request } from 'express';
+import { Request } from "express";
 
-import Config from '../core/config';
-import { ClientIpAddressEmptyException, UnspecifiedException } from '../core/exception';
-import { LogLevel } from '../core/server';
-import NewSyncLogsModel, { INewSyncLog } from '../models/newSyncLogs.model';
-import BaseService from './base.service';
+import Config from "../core/config";
+import { NewSyncLogs } from "../core/dbentities";
+import { ClientIpAddressEmptyException, UnspecifiedException } from "../core/exception";
+import { INewSyncLogs } from "../core/interfaces";
+import { LogLevel } from "../core/server";
+import BaseService from "./base.service";
+import * as uuid from "uuid/v4"
 
 // Implementation of data service for new sync log operations
 export default class NewSyncLogsService extends BaseService<void> {
   // Creates a new sync log entry with the supplied request data
-  public async createLog(req: Request): Promise<INewSyncLog> {
+  public async createLog(req: Request): Promise<INewSyncLogs> {
     // Get the client's ip address
     const clientIp = this.getClientIpAddress(req);
     if (!clientIp) {
       const err = new ClientIpAddressEmptyException();
-      this.log(LogLevel.Error, 'Exception occurred in NewSyncLogsService.createLog', req, err);
+      this.log(LogLevel.Error, "Exception occurred in NewSyncLogsService.createLog", req, err);
       throw err;
     }
 
     // Create new sync log payload
-    const newLogPayload: INewSyncLog = {
+    const newLogPayload: INewSyncLogs = {
+      _id: uuid(),
       ipAddress: clientIp
     };
-    const newSyncLogsModel = new NewSyncLogsModel(newLogPayload);
+    const newSyncLogsModel = new NewSyncLogs(newLogPayload);
 
     // Commit the payload to the db
     try {
-      await newSyncLogsModel.save();
+      await NewSyncLogs.save(newSyncLogsModel);
     }
     catch (err) {
-      this.log(LogLevel.Error, 'Exception occurred in NewSyncLogsService.createLog', req, err);
+      this.log(LogLevel.Error, "Exception occurred in NewSyncLogsService.createLog", req, err);
       throw err;
     }
 
@@ -42,7 +45,7 @@ export default class NewSyncLogsService extends BaseService<void> {
     const clientIp = this.getClientIpAddress(req);
     if (!clientIp) {
       const err = new ClientIpAddressEmptyException();
-      this.log(LogLevel.Error, 'Exception occurred in NewSyncLogsService.newSyncsLimitHit', req, err);
+      this.log(LogLevel.Error, "Exception occurred in NewSyncLogsService.newSyncsLimitHit", req, err);
       throw err;
     }
 
@@ -50,17 +53,17 @@ export default class NewSyncLogsService extends BaseService<void> {
 
     // Query the newsynclogs collection for the total number of logs for the given ip address
     try {
-      newSyncsCreated = await NewSyncLogsModel.countDocuments({ ipAddress: clientIp }).exec();
+      newSyncsCreated = await NewSyncLogs.countDocuments({ ipAddress: clientIp });
     }
     catch (err) {
-      this.log(LogLevel.Error, 'Exception occurred in NewSyncLogsService.newSyncsLimitHit', req, err);
+      this.log(LogLevel.Error, "Exception occurred in NewSyncLogsService.newSyncsLimitHit", req, err);
       throw err;
     }
 
     // Ensure a valid count was returned
     if (newSyncsCreated < 0) {
-      const err = new UnspecifiedException('New syncs created count cannot be less than zero');
-      this.log(LogLevel.Error, 'Exception occurred in NewSyncLogsService.newSyncsLimitHit', req, err);
+      const err = new UnspecifiedException("New syncs created count cannot be less than zero");
+      this.log(LogLevel.Error, "Exception occurred in NewSyncLogsService.newSyncsLimitHit", req, err);
       throw err;
     }
 

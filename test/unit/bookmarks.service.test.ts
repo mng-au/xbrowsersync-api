@@ -7,13 +7,13 @@ import 'mocha';
 import * as sinon from 'sinon';
 
 import Config from '../../src/core/config';
+import { Bookmarks } from "../../src/core/dbentities";
 import {
   InvalidSyncIdException,
   NewSyncsForbiddenException,
   NewSyncsLimitExceededException
 } from '../../src/core/exception';
 import Server from '../../src/core/server';
-import BookmarksModel, { IBookmarksModel } from '../../src/models/bookmarks.model';
 import BookmarksService from '../../src/services/bookmarks.service';
 import NewSyncLogsService from '../../src/services/newSyncLogs.service';
 
@@ -97,7 +97,7 @@ describe('BookmarksService', () => {
     sandbox.stub(Config, 'get').returns(testConfig);
     sandbox.stub(BookmarksService.prototype, 'isAcceptingNewSyncs').returns(Promise.resolve(true));
     sandbox.stub(newSyncLogsService, 'newSyncsLimitHit').returns(Promise.resolve(false));
-    sandbox.stub(BookmarksModel.prototype, 'save').returns(Promise.resolve({}));
+    sandbox.stub(Bookmarks.prototype, 'save').returns(Promise.resolve({}));
     const createLogStub = sandbox.stub(newSyncLogsService, 'createLog').returns(Promise.resolve({}));
 
     const newBookmarksSync = await bookmarksService.createBookmarks_v2(syncVersionTestVal, req as Request);
@@ -109,7 +109,7 @@ describe('BookmarksService', () => {
     const req: Partial<Request> = {};
     sandbox.stub(BookmarksService.prototype, 'isAcceptingNewSyncs').returns(Promise.resolve(true));
     sandbox.stub(newSyncLogsService, 'newSyncsLimitHit').returns(Promise.resolve(false));
-    sandbox.stub(BookmarksModel.prototype, 'save').returns(Promise.resolve({
+    sandbox.stub(Bookmarks.prototype, 'save').returns(Promise.resolve({
       lastUpdated: createdDateTestVal,
       version: syncVersionTestVal
     }));
@@ -124,7 +124,7 @@ describe('BookmarksService', () => {
 
   it('getBookmarks: should throw a InvalidSyncIdException db operation returns null', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(BookmarksModel, 'findOneAndUpdate').returns({
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
       exec: () => Promise.resolve(null)
     } as any);
     
@@ -141,7 +141,7 @@ describe('BookmarksService', () => {
 
   it('getBookmarks: should return bookmarks data', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(BookmarksModel, 'findOneAndUpdate').returns({
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
       exec: () => Promise.resolve({
         bookmarks: bookmarksDataTestVal,
         lastUpdated: createdDateTestVal,
@@ -159,7 +159,7 @@ describe('BookmarksService', () => {
 
   it('getLastUpdated: should throw a InvalidSyncIdException db operation returns null', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(BookmarksModel, 'findOneAndUpdate').returns({
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
       exec: () => Promise.resolve(null)
     } as any);
     
@@ -176,7 +176,7 @@ describe('BookmarksService', () => {
 
   it('getLastUpdated: should return bookmarks last updated date', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(BookmarksModel, 'findOneAndUpdate').returns({
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
       exec: () => Promise.resolve({
         lastUpdated: createdDateTestVal
       } as any)
@@ -190,7 +190,7 @@ describe('BookmarksService', () => {
 
   it('getVersion: should throw a InvalidSyncIdException db operation returns null', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(BookmarksModel, 'findOneAndUpdate').returns({
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
       exec: () => Promise.resolve(null)
     } as any);
     
@@ -207,7 +207,7 @@ describe('BookmarksService', () => {
 
   it('getVersion: should return bookmarks sync version', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(BookmarksModel, 'findOneAndUpdate').returns({
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
       exec: () => Promise.resolve({
         version: syncVersionTestVal
       } as any)
@@ -239,7 +239,7 @@ describe('BookmarksService', () => {
     testConfig.maxSyncs = 1;
     sandbox.stub(Config, 'get').returns(testConfig);
 
-    const countStub = sandbox.stub(BookmarksModel, 'estimatedDocumentCount').returns({
+    const countStub = sandbox.stub(Bookmarks, 'estimatedDocumentCount').returns({
       exec: () => Promise.resolve(0)
     } as any);
 
@@ -252,7 +252,7 @@ describe('BookmarksService', () => {
     testConfig.maxSyncs = 1;
     sandbox.stub(Config, 'get').returns(testConfig);
 
-    const countStub = sandbox.stub(BookmarksModel, 'estimatedDocumentCount').returns({
+    const countStub = sandbox.stub(Bookmarks, 'estimatedDocumentCount').returns({
       exec: () => Promise.resolve(1)
     } as any);
 
@@ -263,7 +263,7 @@ describe('BookmarksService', () => {
 
   it('updateBookmarks: should throw a InvalidSyncIdException if db operation returns null', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(BookmarksModel, 'findOneAndUpdate').returns({
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
       exec: () => Promise.resolve(null)
     } as any);
     
@@ -280,7 +280,7 @@ describe('BookmarksService', () => {
 
   it('updateBookmarks: should return false if total bookmarks syncs is not less than max syncs limit', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(BookmarksModel, 'findOneAndUpdate').returns({
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
       exec: () => Promise.resolve({
         lastUpdated: createdDateTestVal
       } as any)

@@ -23,13 +23,16 @@
     "express-rate-limit": "^3.3.2",
     "express-routes-versioning": "^1.0.1",
     "helmet": "^3.15.0",
+    "inversify": "^5.0.1",
     "mkdirp": "^0.5.1",
     "moment": "^2.23.0",
     "mongodb": "^3.1.10",
     "mongoose": "^5.4.2",
     "mongoose-uuid2": "^2.3.0",
+    "mysql": "^2.16.0",
     "smooth-scroll": "^15.0.0",
     "typeface-roboto-condensed": "0.0.54",
+    "typeorm": "^0.2.11",
     "uuid": "^3.3.2",
     "whatwg-fetch": "^3.0.0"
   },
@@ -42,8 +45,6 @@
     "@types/express-rate-limit": "^3.3.0",
     "@types/helmet": "0.0.42",
     "@types/mocha": "^5.2.5",
-    "@types/mongodb": "^3.1.18",
-    "@types/mongoose": "^5.3.7",
     "@types/node": "^10.12.18",
     "@types/sinon": "^7.0.3",
     "@types/uuid": "^3.4.4",
@@ -82,6 +83,7 @@
     "buildcomplete": "echo Done!",
     "test": "npm run unittests",
     "unittests": "echo Running unit tests... & mocha --require ts-node/register test/unit/*.test.ts",
-    "integrationtests": "echo Running integration tests... & mocha --require ts-node/register test/integration/*.test.ts"
+    "integrationtests": "echo Running integration tests... & mocha --require ts-node/register test/integration/*.test.ts",
+    "typecheck": "tsc --noEmit"
   }
 }

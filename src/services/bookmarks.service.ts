@@ -1,15 +1,16 @@
 import { Request } from 'express';
-import * as uuid from 'uuid';
+import * as uuid from 'uuid/v4';
 
 import Config from '../core/config';
+import { Bookmarks } from "../core/dbentities";
 import {
   InvalidSyncIdException,
   NewSyncsForbiddenException,
   NewSyncsLimitExceededException,
   UnspecifiedException
 } from '../core/exception';
+import { IBookmarks, IBookmarksPartial } from "../core/interfaces";
 import Server, { LogLevel } from '../core/server';
-import BookmarksModel, { IBookmarks } from '../models/bookmarks.model';
 import NewSyncLogsService from '../services/newSyncLogs.service';
 import BaseService from './base.service';
 
@@ -70,12 +71,14 @@ export default class BookmarksService extends BaseService<NewSyncLogsService> {
       // Create new bookmarks payload
       const newBookmarks: IBookmarks = {
         _id: id,
-        bookmarks: bookmarksData
+        bookmarks: bookmarksData,
+        lastAccessed: new Date(),
+        lastUpdated: new Date()
       };
-      const bookmarksModel = new BookmarksModel(newBookmarks);
+      const bookmarksModel = new Bookmarks(newBookmarks);
 
       // Commit the bookmarks payload to the db
-      const savedBookmarks = await bookmarksModel.save();
+      const savedBookmarks = await Bookmarks.save(bookmarksModel);
 
       // Add to logs
       if (Config.get().dailyNewSyncsLimit > 0) {
@@ -122,12 +125,14 @@ export default class BookmarksService extends BaseService<NewSyncLogsService> {
       // Create new bookmarks payload
       const newBookmarks: IBookmarks = {
         _id: id,
-        version: syncVersion
+        version: syncVersion,
+        lastAccessed: new Date(),
+        lastUpdated: new Date()
       };
-      const bookmarksModel = new BookmarksModel(newBookmarks);
+      const bookmarksModel = new Bookmarks(newBookmarks);
 
       // Commit the bookmarks payload to the db
-      const savedBookmarks = await bookmarksModel.save();
+      const savedBookmarks = await Bookmarks.save(bookmarksModel);
 
       // Add to logs
       if (Config.get().dailyNewSyncsLimit > 0) {
@@ -156,12 +161,7 @@ export default class BookmarksService extends BaseService<NewSyncLogsService> {
 
     try {
       // Query the db for the existing bookmarks data and update the last accessed date
-      const updatedBookmarks = await BookmarksModel.findOneAndUpdate(
-        { _id: id },
-        { lastAccessed: new Date() },
-        { new: true }
-      ).exec();
-
+      let updatedBookmarks = await Bookmarks.updateLastAccessed(id, new Date());
       if (!updatedBookmarks) {
         throw new InvalidSyncIdException();
       }
@@ -190,12 +190,7 @@ export default class BookmarksService extends BaseService<NewSyncLogsService> {
 
     try {
       // Query the db for the existing bookmarks data and update the last accessed date
-      const updatedBookmarks = await BookmarksModel.findOneAndUpdate(
-        { _id: id },
-        { lastAccessed: new Date() },
-        { new: true }
-      ).exec();
-
+      const updatedBookmarks = await Bookmarks.updateLastAccessed(id, new Date());
       if (!updatedBookmarks) {
         throw new InvalidSyncIdException();
       }
@@ -222,12 +217,7 @@ export default class BookmarksService extends BaseService<NewSyncLogsService> {
 
     try {
       // Query the db for the existing bookmarks data and update the last accessed date
-      const updatedBookmarks = await BookmarksModel.findOneAndUpdate(
-        { _id: id },
-        { lastAccessed: new Date() },
-        { new: true }
-      ).exec();
-
+      const updatedBookmarks = await Bookmarks.updateLastAccessed(id, new Date());
       if (!updatedBookmarks) {
         throw new InvalidSyncIdException();
       }
@@ -272,15 +262,11 @@ export default class BookmarksService extends BaseService<NewSyncLogsService> {
     try {
       // Update the bookmarks data corresponding to the sync id in the db
       const now = new Date();
-      const updatedBookmarks = await BookmarksModel.findOneAndUpdate(
-        { _id: id },
-        {
-          bookmarks: bookmarksData,
-          lastAccessed: now,
-          lastUpdated: now
-        },
-        { new: true }
-      ).exec();
+      const updatedBookmarks = await Bookmarks.update(id,{
+        bookmarks: bookmarksData,
+        lastAccessed: now,
+        lastUpdated: now
+      });
 
       // Return the last updated date if bookmarks data found and updated
       const response: IGetLastUpdatedResponse = {};
@@ -303,7 +289,7 @@ export default class BookmarksService extends BaseService<NewSyncLogsService> {
 
     // Create update payload depending on whether sync version supplied
     const now = new Date();
-    const updatePayload: IBookmarks = {
+    const updatePayload: IBookmarksPartial = {
       bookmarks: bookmarksData,
       lastAccessed: now,
       lastUpdated: now
@@ -314,11 +300,7 @@ export default class BookmarksService extends BaseService<NewSyncLogsService> {
 
     try {
       // Update the bookmarks data corresponding to the sync id in the db
-      const updatedBookmarks = await BookmarksModel.findOneAndUpdate(
-        { _id: id },
-        updatePayload,
-        { new: true }
-      ).exec();
+      const updatedBookmarks = await Bookmarks.update(id, updatePayload);
 
       if (!updatedBookmarks) {
         throw new InvalidSyncIdException();
@@ -345,7 +327,7 @@ export default class BookmarksService extends BaseService<NewSyncLogsService> {
     let bookmarksCount = -1;
 
     try {
-      bookmarksCount = await BookmarksModel.estimatedDocumentCount().exec();
+      bookmarksCount = await Bookmarks.estimatedDocumentCount();
     }
     catch (err) {
       this.log(LogLevel.Error, 'Exception occurred in BookmarksService.getBookmarksCount', null, err);
@@ -368,7 +350,7 @@ export default class BookmarksService extends BaseService<NewSyncLogsService> {
 
     try {
       // Create a new v4 uuid and return as an unbroken string to use for a unique id
-      const bytes: any = uuid.v4(null, Buffer.alloc(16));
+      const bytes: any = uuid(null, Buffer.alloc(16));
       newId = Buffer.from(bytes, 'base64').toString('hex');
     }
     catch (err) {

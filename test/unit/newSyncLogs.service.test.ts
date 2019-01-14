@@ -7,8 +7,8 @@ import 'mocha';
 import * as sinon from 'sinon';
 
 import Config from '../../src/core/config';
+import { NewSyncLogs } from "../../src/core/dbentities";
 import { ClientIpAddressEmptyException } from '../../src/core/exception';
-import NewSyncLogsModel from '../../src/models/newSyncLogs.model';
 import NewSyncLogsService from '../../src/services/newSyncLogs.service';
 
 describe('NewSyncLogsService', () => {
@@ -32,7 +32,7 @@ describe('NewSyncLogsService', () => {
     const req: Partial<Request> = {
       ip: testClientIPAddress
     };
-    const saveStub = sandbox.stub(NewSyncLogsModel.prototype, 'save');
+    const saveStub = sandbox.stub(NewSyncLogs.prototype, 'save');
     const savedTestLog = await newSyncLogsService.createLog(req as Request);
 
     expect(saveStub.called).to.be.true;
@@ -57,7 +57,7 @@ describe('NewSyncLogsService', () => {
     const dailyNewSyncsLimitTestVal = 1;
     testConfig.dailyNewSyncsLimit = dailyNewSyncsLimitTestVal;
     sandbox.stub(Config, 'get').returns(testConfig);
-    const countStub = sandbox.stub(NewSyncLogsModel, 'countDocuments').returns({
+    const countStub = sandbox.stub(NewSyncLogs, 'countDocuments').returns({
       exec: () => Promise.resolve(dailyNewSyncsLimitTestVal)
     } as any);
 
@@ -72,7 +72,7 @@ describe('NewSyncLogsService', () => {
     };
     testConfig.dailyNewSyncsLimit = 3;
     sandbox.stub(Config, 'get').returns(testConfig);
-    const countStub = sandbox.stub(NewSyncLogsModel, 'countDocuments').returns({
+    const countStub = sandbox.stub(NewSyncLogs, 'countDocuments').returns({
       exec: () => Promise.resolve(1)
     } as any);
 
