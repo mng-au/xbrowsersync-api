@@ -5,6 +5,7 @@ import { assert, expect } from 'chai';
 import { Request } from 'express';
 import 'mocha';
 import * as sinon from 'sinon';
+import * as typeorm from "typeorm";
 
 import Config from '../../src/core/config';
 import { Bookmarks } from "../../src/core/dbentities";
@@ -33,6 +34,12 @@ describe('BookmarksService', () => {
     bookmarksService = new BookmarksService(newSyncLogsService, log);
     sandbox = sinon.createSandbox();
     sandbox.stub(Server, 'checkServiceAvailability');
+    const stubRepository = sandbox.createStubInstance(typeorm.Repository);
+    stubRepository.findOne = sinon.spy((id: string) => {}) as any;
+    const stubConnection = sandbox.createStubInstance(typeorm.Connection);
+    stubConnection.getRepository = sinon.spy(() => stubRepository) as any;
+    stubConnection.close = sinon.spy(() => {}) as any;
+    sandbox.stub(typeorm, 'createConnection').returns(Promise.resolve(stubConnection as any));
   });
 
   afterEach(() => {
@@ -97,8 +104,8 @@ describe('BookmarksService', () => {
     sandbox.stub(Config, 'get').returns(testConfig);
     sandbox.stub(BookmarksService.prototype, 'isAcceptingNewSyncs').returns(Promise.resolve(true));
     sandbox.stub(newSyncLogsService, 'newSyncsLimitHit').returns(Promise.resolve(false));
-    sandbox.stub(Bookmarks.prototype, 'save').returns(Promise.resolve({}));
-    const createLogStub = sandbox.stub(newSyncLogsService, 'createLog').returns(Promise.resolve({}));
+    sandbox.stub(Bookmarks, 'save').returns(Promise.resolve({ _id: undefined, lastAccessed: new Date(), lastUpdated: new Date() }));
+    const createLogStub = sandbox.stub(newSyncLogsService, 'createLog').returns(Promise.resolve({ _id: undefined }));
 
     const newBookmarksSync = await bookmarksService.createBookmarks_v2(syncVersionTestVal, req as Request);
     // tslint:disable-next-line:no-unused-expression
@@ -109,11 +116,13 @@ describe('BookmarksService', () => {
     const req: Partial<Request> = {};
     sandbox.stub(BookmarksService.prototype, 'isAcceptingNewSyncs').returns(Promise.resolve(true));
     sandbox.stub(newSyncLogsService, 'newSyncsLimitHit').returns(Promise.resolve(false));
-    sandbox.stub(Bookmarks.prototype, 'save').returns(Promise.resolve({
+    sandbox.stub(Bookmarks, 'save').returns(Promise.resolve({
+      _id: undefined,
+      lastAccessed: undefined,
       lastUpdated: createdDateTestVal,
       version: syncVersionTestVal
     }));
-    sandbox.stub(newSyncLogsService, 'createLog').returns(Promise.resolve({}));
+    sandbox.stub(newSyncLogsService, 'createLog').returns(Promise.resolve({ _id: undefined }));
 
     const newBookmarksSync = await bookmarksService.createBookmarks_v2(syncVersionTestVal, req as Request);
     expect(newBookmarksSync).to.be.an('object');
@@ -124,14 +133,15 @@ describe('BookmarksService', () => {
 
   it('getBookmarks: should throw a InvalidSyncIdException db operation returns null', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
-      exec: () => Promise.resolve(null)
-    } as any);
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'update').returns(Promise.resolve(null));
     
     try {
       const bookmarksSync = await bookmarksService.getBookmarks(null, req as Request);
     }
     catch (err) {
+      if (!(err instanceof InvalidSyncIdException)) {
+        throw err;
+      }
       expect(err).to.be.an.instanceOf(InvalidSyncIdException);
       return;
     }
@@ -141,13 +151,12 @@ describe('BookmarksService', () => {
 
   it('getBookmarks: should return bookmarks data', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
-      exec: () => Promise.resolve({
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'updateLastAccessed').returns(
+      Promise.resolve({
         bookmarks: bookmarksDataTestVal,
         lastUpdated: createdDateTestVal,
         version: syncVersionTestVal
-      } as any)
-    } as any);
+      } as any));
 
     const bookmarksSync = await bookmarksService.getBookmarks(null, req as Request);
     expect(findOneAndUpdateStub.called).to.be.true;
@@ -159,9 +168,7 @@ describe('BookmarksService', () => {
 
   it('getLastUpdated: should throw a InvalidSyncIdException db operation returns null', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
-      exec: () => Promise.resolve(null)
-    } as any);
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'update').returns(Promise.resolve(null) as any);
     
     try {
       const bookmarksSync = await bookmarksService.getLastUpdated(null, req as Request);
@@ -176,11 +183,10 @@ describe('BookmarksService', () => {
 
   it('getLastUpdated: should return bookmarks last updated date', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
-      exec: () => Promise.resolve({
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'updateLastAccessed').returns(
+      Promise.resolve({
         lastUpdated: createdDateTestVal
-      } as any)
-    } as any);
+      }) as any);
 
     const bookmarksSync = await bookmarksService.getLastUpdated(null, req as Request);
     expect(findOneAndUpdateStub.called).to.be.true;
@@ -190,9 +196,7 @@ describe('BookmarksService', () => {
 
   it('getVersion: should throw a InvalidSyncIdException db operation returns null', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
-      exec: () => Promise.resolve(null)
-    } as any);
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'update').returns(Promise.resolve(null));
     
     try {
       const bookmarksSync = await bookmarksService.getVersion(null, req as Request);
@@ -207,11 +211,10 @@ describe('BookmarksService', () => {
 
   it('getVersion: should return bookmarks sync version', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
-      exec: () => Promise.resolve({
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'updateLastAccessed').returns(
+      Promise.resolve({
         version: syncVersionTestVal
-      } as any)
-    } as any);
+      } as any));
 
     const bookmarksSync = await bookmarksService.getVersion(null, req as Request);
     expect(findOneAndUpdateStub.called).to.be.true;
@@ -239,9 +242,8 @@ describe('BookmarksService', () => {
     testConfig.maxSyncs = 1;
     sandbox.stub(Config, 'get').returns(testConfig);
 
-    const countStub = sandbox.stub(Bookmarks, 'estimatedDocumentCount').returns({
-      exec: () => Promise.resolve(0)
-    } as any);
+    const countStub = sandbox.stub(Bookmarks, 'estimatedDocumentCount').returns(
+      Promise.resolve(0) as any);
 
     const isAcceptingNewSyncs = await bookmarksService.isAcceptingNewSyncs();
     expect(countStub.called).to.be.true;
@@ -252,9 +254,7 @@ describe('BookmarksService', () => {
     testConfig.maxSyncs = 1;
     sandbox.stub(Config, 'get').returns(testConfig);
 
-    const countStub = sandbox.stub(Bookmarks, 'estimatedDocumentCount').returns({
-      exec: () => Promise.resolve(1)
-    } as any);
+    const countStub = sandbox.stub(Bookmarks, 'estimatedDocumentCount').returns(Promise.resolve(1));
 
     const isAcceptingNewSyncs = await bookmarksService.isAcceptingNewSyncs();
     expect(countStub.called).to.be.true;
@@ -263,9 +263,7 @@ describe('BookmarksService', () => {
 
   it('updateBookmarks: should throw a InvalidSyncIdException if db operation returns null', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
-      exec: () => Promise.resolve(null)
-    } as any);
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'update').returns(Promise.resolve(null) as any);
     
     try {
       const bookmarksSync = await bookmarksService.updateBookmarks_v2(null, bookmarksDataTestVal, syncVersionTestVal, req as Request);
@@ -280,11 +278,10 @@ describe('BookmarksService', () => {
 
   it('updateBookmarks: should return false if total bookmarks syncs is not less than max syncs limit', async () => {
     const req: Partial<Request> = {};
-    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'findOneAndUpdate').returns({
-      exec: () => Promise.resolve({
+    const findOneAndUpdateStub = sandbox.stub(Bookmarks, 'update').returns(
+      Promise.resolve({
         lastUpdated: createdDateTestVal
-      } as any)
-    } as any);
+      }) as any);
 
     const updatedBookmarksSync = await bookmarksService.updateBookmarks_v2(null, bookmarksDataTestVal, syncVersionTestVal, req as Request);
     expect(findOneAndUpdateStub.called).to.be.true;

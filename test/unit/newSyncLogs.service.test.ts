@@ -32,7 +32,7 @@ describe('NewSyncLogsService', () => {
     const req: Partial<Request> = {
       ip: testClientIPAddress
     };
-    const saveStub = sandbox.stub(NewSyncLogs.prototype, 'save');
+    const saveStub = sandbox.stub(NewSyncLogs, 'save');
     const savedTestLog = await newSyncLogsService.createLog(req as Request);
 
     expect(saveStub.called).to.be.true;
@@ -57,9 +57,9 @@ describe('NewSyncLogsService', () => {
     const dailyNewSyncsLimitTestVal = 1;
     testConfig.dailyNewSyncsLimit = dailyNewSyncsLimitTestVal;
     sandbox.stub(Config, 'get').returns(testConfig);
-    const countStub = sandbox.stub(NewSyncLogs, 'countDocuments').returns({
-      exec: () => Promise.resolve(dailyNewSyncsLimitTestVal)
-    } as any);
+    const countStub = sandbox.stub(NewSyncLogs, 'countDocuments').returns(
+      Promise.resolve(dailyNewSyncsLimitTestVal)
+    );
 
     const limitHit = await newSyncLogsService.newSyncsLimitHit(req as Request);
     expect(countStub.called).to.be.true;
@@ -72,9 +72,7 @@ describe('NewSyncLogsService', () => {
     };
     testConfig.dailyNewSyncsLimit = 3;
     sandbox.stub(Config, 'get').returns(testConfig);
-    const countStub = sandbox.stub(NewSyncLogs, 'countDocuments').returns({
-      exec: () => Promise.resolve(1)
-    } as any);
+    const countStub = sandbox.stub(NewSyncLogs, 'countDocuments').returns(Promise.resolve(1));
 
     const limitHit = await newSyncLogsService.newSyncsLimitHit(req as Request);
     expect(countStub.called).to.be.true;
